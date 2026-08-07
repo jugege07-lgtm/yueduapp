@@ -84,7 +84,8 @@ def patch_manifest():
     print("+ manifest patched")
 
 
-def patch_minsdk():
+def patch_gradle():
+    """把 minSdk 锁成 21、compileSdk 提到 36（file_picker 等插件要求）。"""
     candidates = [
         os.path.join(ROOT, "android", "app", "build.gradle"),
         os.path.join(ROOT, "android", "app", "build.gradle.kts"),
@@ -94,11 +95,15 @@ def patch_minsdk():
             continue
         with open(g, encoding="utf-8") as f:
             c = f.read()
+        # minSdk -> 21
         c = re.sub(r"minSdk\s*=\s*\d+", "minSdk = 21", c)
         c = re.sub(r"minSdkVersion\s+\d+", "minSdkVersion 21", c)
+        # compileSdk -> 36（file_picker 8.x 的 AAR 要求 >= 36）
+        c = re.sub(r"compileSdk\s*=\s*\d+", "compileSdk = 36", c)
+        c = re.sub(r"compileSdkVersion\s*\d+", "compileSdkVersion 36", c)
         with open(g, "w", encoding="utf-8") as f:
             f.write(c)
-        print("+ minSdk patched:", os.path.basename(g))
+        print("+ gradle patched (minSdk=21, compileSdk=36):", os.path.basename(g))
 
 
 def patch_icon():
@@ -134,5 +139,5 @@ def patch_icon():
 if __name__ == "__main__":
     patch_icon()
     patch_manifest()
-    patch_minsdk()
+    patch_gradle()
     print("patch_android done")
