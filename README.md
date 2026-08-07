@@ -42,10 +42,10 @@ flutter pub get
 # 5) 下载离线语音模型（生成 assets/tts-model/manifest.txt 与模型文件）
 bash tools/download_tts_model.sh
 
-# 6) 按脚本提示，编辑 lib/services/tts_model_config.dart，
-#    把里面的路径改成下载模型里的实际文件名。
+# （无需手动改路径：tts_model_config.dart 会自动扫描模型目录，
+#   下载任何中文 VITS 模型都能直接用。）
 
-# 7) 运行 / 打包
+# 6) 运行 / 打包
 flutter run                       # 连真机或模拟器
 flutter build apk --split-per-abi # 产出 APK
 ```
@@ -78,6 +78,23 @@ defaultConfig {
 
 ---
 
+## 线上打包（GitHub Actions，本机零安装）
+
+不想在本机装 Android Studio？仓库已内置 CI 工作流，让 GitHub 的云服务器帮你编译 APK：
+
+1. 把代码推送到 GitHub（本仓库已配好 `origin`）。
+2. 打开 **GitHub → 仓库 → Actions → Build APK**。
+3. 点 **Run workflow**（或直接 push 到 main 就会自动触发）。
+4. 跑完后，在 **Artifacts** 里下载 `txt-reader-apks`，里面是按架构拆分的 APK
+   （`app-armeabi-v7a-release.apk` / `app-arm64-v8a-release.apk` / `app-x86_64-release.apk`）。
+5. 把对应你手机架构的 APK（一般选 **arm64-v8a**）传到手机安装即可。
+
+> CI 里会自动完成：生成 Android 脚手架 → 补权限/minSdk/锁屏音频服务
+> （`tools/patch_android.py`）→ 下载离线 TTS 模型打包进 APK → `flutter build apk`。
+> 即使模型下载失败，APK 仍会正常产出，只是听书功能暂时不可用。
+
+---
+
 ## 目录结构
 
 ```
@@ -92,7 +109,7 @@ lib/
 │   ├── txt_loader.dart        # 解码 + 段落切分
 │   ├── paginator.dart         # 智能分页（不切字）
 │   ├── wav_encoder.dart       # Float32 -> WAV
-│   ├── tts_model_config.dart  # ⚠ 需按下载模型填写路径
+│   ├── tts_model_config.dart  # 自动识别模型文件（无需手改）
 │   ├── tts_service.dart       # sherpa_onnx 离线合成
 │   └── audio_player.dart      # audio_service + just_audio 后台/锁屏
 ├── providers/reader_provider.dart
