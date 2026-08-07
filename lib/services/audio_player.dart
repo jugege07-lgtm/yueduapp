@@ -44,7 +44,7 @@ class TtsAudioHandler extends BaseAudioHandler with SeekHandler {
   }
 
   /// 设置待播放的段落序列，并从 [startIndex] 段、[speed] 倍速开始准备
-  void prepare(List<String> paragraphs, int startIndex, double speed) {
+  void loadPlaylist(List<String> paragraphs, int startIndex, double speed) {
     _paragraphs = paragraphs;
     _index = startIndex;
     _speed = speed;
@@ -105,7 +105,8 @@ class TtsAudioHandler extends BaseAudioHandler with SeekHandler {
         ProcessingState.buffering: AudioProcessingState.buffering,
         ProcessingState.ready: AudioProcessingState.ready,
         ProcessingState.completed: AudioProcessingState.completed,
-      }[_player.processingState],
+      }[_player.processingState] ??
+          AudioProcessingState.idle,
     ));
   }
 

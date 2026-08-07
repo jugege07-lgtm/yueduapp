@@ -96,7 +96,7 @@ class ReaderProvider extends ChangeNotifier {
       await handler.pause();
       ttsActive = false;
     } else {
-      handler.prepare(paragraphs, currentParagraph, book!.ttsSpeed);
+      handler.loadPlaylist(paragraphs, currentParagraph, book!.ttsSpeed);
       await handler.start();
       ttsActive = true;
     }

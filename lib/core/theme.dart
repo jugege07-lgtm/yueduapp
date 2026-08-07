@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'core/constants.dart';
+import 'constants.dart';
 
 /// 全局纯白主题：根页面固定 #FFFFFF，卡片统一圆角 12 + 轻微阴影
 ThemeData buildWhiteTheme() {
@@ -19,7 +19,7 @@ ThemeData buildWhiteTheme() {
         color: AppColors.text,
       ),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: AppColors.white,
       elevation: AppTheme.cardElevation,
       shadowColor: AppColors.cardShadow,
@@ -36,7 +36,6 @@ ThemeData buildWhiteTheme() {
     useMaterial3: true,
     progressIndicatorTheme: const ProgressIndicatorThemeData(
       color: AppColors.text,
-      trackColor: AppColors.track,
     ),
   );
 }
