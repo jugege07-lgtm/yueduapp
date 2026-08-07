@@ -181,9 +181,51 @@ gradle.projectsEvaluated {
     print("+ root gradle patched (force compileSdk=36 on library subprojects)")
 
 
+def patch_pubcache_plugins():
+    """直接改写 pub-cache 里各 Flutter 插件模块的 build.gradle(.kts)，
+    把所有 compileSdk < 36 的硬编码提升到 36。
+
+    file_picker 8.x 等老插件自带 compileSdkVersion 34（硬编码），
+    反射方式在它们身上无效，只能直接改文件。
+    """
+    pub = os.path.expanduser(os.path.join("~", ".pub-cache", "hosted", "pub.dev"))
+    if not os.path.isdir(pub):
+        print("! pub-cache 不存在，跳过插件 compileSdk 补丁:", pub)
+        return
+    patched = 0
+    for entry in sorted(os.listdir(pub)):
+        pkg_dir = os.path.join(pub, entry)
+        if not os.path.isdir(pkg_dir):
+            continue
+        for rel in ("android/build.gradle", "android/build.gradle.kts"):
+            gradle = os.path.join(pkg_dir, rel)
+            if not os.path.exists(gradle):
+                continue
+            with open(gradle, encoding="utf-8", errors="ignore") as f:
+                c = f.read()
+            orig = c
+            c = re.sub(
+                r"compileSdkVersion\s+(\d+)",
+                lambda m: "compileSdkVersion 36" if int(m.group(1)) < 36 else m.group(0),
+                c,
+            )
+            c = re.sub(
+                r"compileSdk\s*=\s*(\d+)",
+                lambda m: "compileSdk = 36" if int(m.group(1)) < 36 else m.group(0),
+                c,
+            )
+            if c != orig:
+                with open(gradle, "w", encoding="utf-8") as f:
+                    f.write(c)
+                patched += 1
+                print("+ plugin compileSdk patched:", os.path.join(entry, rel))
+    print("+ pub-cache plugins patched count:", patched)
+
+
 if __name__ == "__main__":
     patch_icon()
     patch_manifest()
     patch_gradle()
     patch_root_gradle()
+    patch_pubcache_plugins()
     print("patch_android done")

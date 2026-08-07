@@ -31,14 +31,15 @@ jobs:
         # 仓库里没有提交 android/ 目录，先在云端生成（不碰 lib/ 和 pubspec）
         run: flutter create --platforms=android .
 
-      - name: Patch Android (权限 + minSdk + 锁屏音频服务)
-        run: python3 tools/patch_android.py
-
       - name: Download offline TTS model (打包进 APK，失败也不阻断构建)
         run: bash tools/download_tts_model.sh || echo "::warning::模型下载失败，听书功能将不可用（APK 仍可正常打包）"
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Patch Android (权限 + minSdk + 锁屏音频服务 + compileSdk)
+        # 必须在 pub get 之后执行：需要 pub-cache 里已有插件模块才能改它们的 compileSdk
+        run: python3 tools/patch_android.py
 
       - name: Build APK (按 CPU 架构拆分，体积更小)
         run: flutter build apk --split-per-abi --no-tree-shake-icons
