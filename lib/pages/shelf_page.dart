@@ -109,7 +109,7 @@ class _ShelfPageState extends State<ShelfPage> {
                   )
                   .toList(),
               onReorder: (updates) {
-                for (final OrderUpdateEntity u in updates) {
+                for (final ReorderUpdateEntity u in updates) {
                   final b = _books.removeAt(u.oldIndex);
                   _books.insert(u.newIndex, b);
                 }

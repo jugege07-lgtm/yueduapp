@@ -25,7 +25,7 @@ class TtsSpeed {
 
 /// 其它常量
 class AppConst {
-  static const String appTitle = '纯白阅读';
+  static const String appTitle = '阅读';
   static const String shelfTitle = '我的小说';
   static const String modelAssetDir = 'assets/tts-model';
 }

@@ -4,13 +4,16 @@
 CI 用的 Android 工程补丁脚本：
   1) 在 AndroidManifest.xml 中补齐权限（后台/锁屏播放需要）；
   2) 注册 audio_service 的 Service + Receiver（锁屏媒体控制必须）；
-  3) 把 minSdk 锁成 21（后台音频与 sherpa_onnx 的最低要求）。
+  3) 把 minSdk 锁成 21（后台音频与 sherpa_onnx 的最低要求）；
+  4) 覆盖应用图标（android_res/mipmap-* -> android/app/src/main/res/mipmap-*）；
+  5) 设置应用显示名称为「阅读」，并移除自适应图标 XML 以强制使用 PNG。
 
 由 GitHub Actions 在 `flutter create --platforms=android .` 之后调用，
 不依赖任何第三方库（仅标准库）。
 """
 import os
 import re
+import shutil
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MANIFEST = os.path.join(ROOT, "android", "app", "src", "main", "AndroidManifest.xml")
@@ -57,6 +60,25 @@ def patch_manifest():
         </receiver>"""
         s = s.replace("</application>", service + "\n    </application>", 1)
 
+    # 3) 应用显示名称改为「阅读】
+    s = re.sub(r'android:label="[^"]*"', 'android:label="阅读"', s)
+    if 'android:label="阅读"' not in s:
+        # 若原本没有 label，在 <application 标签上加
+        s = re.sub(
+            r'<application',
+            '<application\n        android:label="阅读"',
+            s,
+            count=1,
+        )
+
+    # 4) 确保 icon 指向 mipmap/ic_launcher
+    if 'android:icon="@mipmap/ic_launcher"' not in s:
+        s = re.sub(
+            r'android:icon="@[^"]+"',
+            'android:icon="@mipmap/ic_launcher"',
+            s,
+        )
+
     with open(MANIFEST, "w", encoding="utf-8") as f:
         f.write(s)
     print("+ manifest patched")
@@ -79,7 +101,38 @@ def patch_minsdk():
         print("+ minSdk patched:", os.path.basename(g))
 
 
+def patch_icon():
+    """把仓库里预先生成的图标覆盖到 Android 工程，并删除自适应图标 XML 以强制使用 PNG。"""
+    res_dir = os.path.join(ROOT, "android", "app", "src", "main", "res")
+    src_res = os.path.join(ROOT, "android_res")
+    if not os.path.isdir(src_res):
+        print("! android_res 不存在，跳过图标替换")
+        return
+
+    # 复制各密度图标
+    for folder in os.listdir(src_res):
+        src_folder = os.path.join(src_res, folder)
+        if not os.path.isdir(src_folder):
+            continue
+        dst_folder = os.path.join(res_dir, folder)
+        os.makedirs(dst_folder, exist_ok=True)
+        for name in os.listdir(src_folder):
+            if not name.endswith(".png"):
+                continue
+            src_file = os.path.join(src_folder, name)
+            dst_file = os.path.join(dst_folder, name)
+            shutil.copy2(src_file, dst_file)
+            print("+ icon copied:", dst_file)
+
+    # 移除自适应图标 XML，避免 API 26+ 使用系统默认矢量图标
+    anydpi = os.path.join(res_dir, "mipmap-anydpi-v26")
+    if os.path.isdir(anydpi):
+        shutil.rmtree(anydpi)
+        print("+ removed adaptive icon XML:", anydpi)
+
+
 if __name__ == "__main__":
+    patch_icon()
     patch_manifest()
     patch_minsdk()
     print("patch_android done")
