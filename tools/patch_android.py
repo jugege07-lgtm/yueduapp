@@ -156,10 +156,10 @@ def patch_root_gradle():
         return
     snippet = '''
 // patch_android: force compileSdk
-subprojects {
-    afterEvaluate {
-        if (plugins.hasPlugin("com.android.library")) {
-            val androidExt = extensions.findByName("android")
+gradle.projectsEvaluated {
+    gradle.rootProject.subprojects.forEach { p ->
+        if (p.plugins.hasPlugin("com.android.library")) {
+            val androidExt = p.extensions.findByName("android")
             if (androidExt != null) {
                 try {
                     val setter = androidExt.javaClass.getMethod(
@@ -167,9 +167,9 @@ subprojects {
                         Int::class.javaPrimitiveType
                     )
                     setter.invoke(androidExt, 36)
-                    println("patch_android: compileSdk=36 on " + project.name)
+                    println("patch_android: compileSdk=36 on " + p.name)
                 } catch (e: Exception) {
-                    println("patch_android: skip " + project.name + " (" + e.message + ")")
+                    println("patch_android: skip " + p.name + " (" + e.message + ")")
                 }
             }
         }
