@@ -136,8 +136,54 @@ def patch_icon():
         print("+ removed adaptive icon XML:", anydpi)
 
 
+def patch_root_gradle():
+    """在 android/build.gradle.kts 末尾追加 subprojects 配置，
+    强制所有 Android library 子项目（如 file_picker 等插件）compileSdk=36。
+
+    file_picker 8.x 插件模块自带 compileSdk 34（硬编码），而
+    flutter_plugin_android_lifecycle 要求 >= 36，光改 app 模块无效，
+    必须让所有 library 子项目都提升。
+    """
+    root = os.path.join(ROOT, "android", "build.gradle.kts")
+    if not os.path.exists(root):
+        print("! 根 build.gradle.kts 不存在，跳过:", root)
+        return
+    with open(root, encoding="utf-8") as f:
+        c = f.read()
+    marker = "// patch_android: force compileSdk"
+    if marker in c:
+        print("+ root gradle already patched")
+        return
+    snippet = '''
+// patch_android: force compileSdk
+subprojects {
+    afterEvaluate {
+        if (plugins.hasPlugin("com.android.library")) {
+            val androidExt = extensions.findByName("android")
+            if (androidExt != null) {
+                try {
+                    val setter = androidExt.javaClass.getMethod(
+                        "setCompileSdkVersion",
+                        Int::class.javaPrimitiveType
+                    )
+                    setter.invoke(androidExt, 36)
+                    println("patch_android: compileSdk=36 on " + project.name)
+                } catch (e: Exception) {
+                    println("patch_android: skip " + project.name + " (" + e.message + ")")
+                }
+            }
+        }
+    }
+}
+'''
+    with open(root, "w", encoding="utf-8") as f:
+        f.write(c.rstrip() + "\n" + snippet)
+    print("+ root gradle patched (force compileSdk=36 on library subprojects)")
+
+
 if __name__ == "__main__":
     patch_icon()
     patch_manifest()
     patch_gradle()
+    patch_root_gradle()
     print("patch_android done")
