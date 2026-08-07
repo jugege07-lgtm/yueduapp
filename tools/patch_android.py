@@ -204,14 +204,27 @@ def patch_pubcache_plugins():
             with open(gradle, encoding="utf-8", errors="ignore") as f:
                 c = f.read()
             orig = c
+
+            # 覆盖 4 种写法：compileSdkVersion 34 / = 34 / compileSdk 34 / = 34
             c = re.sub(
                 r"compileSdkVersion\s+(\d+)",
                 lambda m: "compileSdkVersion 36" if int(m.group(1)) < 36 else m.group(0),
                 c,
             )
             c = re.sub(
+                r"compileSdkVersion\s*=\s*(\d+)",
+                lambda m: "compileSdkVersion = 36" if int(m.group(1)) < 36 else m.group(0),
+                c,
+            )
+            c = re.sub(
                 r"compileSdk\s*=\s*(\d+)",
                 lambda m: "compileSdk = 36" if int(m.group(1)) < 36 else m.group(0),
+                c,
+            )
+            # 无等号 Groovy 写法（如 just_audio: compileSdk 34）
+            c = re.sub(
+                r"compileSdk\s+(\d+)",
+                lambda m: "compileSdk 36" if int(m.group(1)) < 36 else m.group(0),
                 c,
             )
             if c != orig:
