@@ -66,16 +66,6 @@ class BookCard extends StatelessWidget {
                 ],
               ),
             ),
-            Positioned(
-              top: 2,
-              right: 2,
-              child: IconButton(
-                onPressed: onDelete,
-                icon: const Icon(Icons.close, size: 18),
-                color: const Color(0xFF888888),
-                tooltip: '删除',
-              ),
-            ),
           ],
         ),
       ),

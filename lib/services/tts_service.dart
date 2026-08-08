@@ -67,9 +67,14 @@ class TtsService {
       await init();
       if (_tts == null) return Uint8List(0);
     }
-    // 注意：若你安装的 sherpa_onnx 版本使用位置参数，请改为
-    //   final audio = _tts!.generate(text, 0, speed);
-    final audio = _tts!.generate(text: text, sid: 0, speed: speed);
-    return WavEncoder.encode(audio.samples, audio.sampleRate);
+    try {
+      // sherpa_onnx 1.13.x: generate 用位置参数 (text, sid, speed)
+      // 早期版本可能用命名参数；若你换版本，按这里改即可
+      final audio = _tts!.generate(text, 0, speed);
+      return WavEncoder.encode(audio.samples, audio.sampleRate);
+    } catch (e) {
+      debugPrint('[TtsService] 合成失败: $e');
+      return Uint8List(0);
+    }
   }
 }
