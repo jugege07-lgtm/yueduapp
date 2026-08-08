@@ -235,10 +235,41 @@ def patch_pubcache_plugins():
     print("+ pub-cache plugins patched count:", patched)
 
 
+def patch_splash():
+    """原生启动画面（launch_background.xml）：白底 + 居中应用图标，
+    避免加载期纯白一片（容易被误认为白屏/死机）。"""
+    f = os.path.join(
+        ROOT, "android", "app", "src", "main", "res", "drawable",
+        "launch_background.xml",
+    )
+    if not os.path.exists(f):
+        print("! launch_background.xml 不存在，跳过:", f)
+        return
+    with open(f, encoding="utf-8") as fp:
+        c = fp.read()
+    if "@mipmap/ic_launcher" in c:
+        print("+ splash already has icon")
+        return
+    item = (
+        '<item android:drawable="@android:color/white" />\n'
+        '    <item>\n'
+        '        <bitmap android:gravity="center" android:src="@mipmap/ic_launcher" />\n'
+        '    </item>'
+    )
+    if '<item android:drawable="@android:color/white" />' in c:
+        c = c.replace('<item android:drawable="@android:color/white" />', item, 1)
+        with open(f, "w", encoding="utf-8") as fp:
+            fp.write(c)
+        print("+ splash icon added")
+    else:
+        print("! launch_background.xml 结构不符合预期，跳过图标（不影响构建）")
+
+
 if __name__ == "__main__":
     patch_icon()
     patch_manifest()
     patch_gradle()
     patch_root_gradle()
     patch_pubcache_plugins()
+    patch_splash()
     print("patch_android done")
