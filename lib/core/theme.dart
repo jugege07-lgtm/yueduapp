@@ -23,6 +23,7 @@ ThemeData buildWhiteTheme() {
       color: AppColors.white,
       elevation: AppTheme.cardElevation,
       shadowColor: AppColors.cardShadow,
+      surfaceTintColor: Colors.transparent,
       margin: const EdgeInsets.all(8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
