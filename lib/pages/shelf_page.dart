@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_reorderable_grid_view/widgets/widgets.dart';
-import 'package:flutter_reorderable_grid_view/entities/reorder_update_entity.dart';
 import '../models/book.dart';
 import '../data/book_store.dart';
 import '../services/txt_importer.dart';
@@ -10,15 +8,15 @@ import 'reader_page.dart';
 
 /// 书架主页。
 ///
-/// 交互：
+/// 交互（三个手势互不冲突）：
 /// - 点击卡片 → 打开阅读
-/// - 短按+拖动卡片 → 自由拖动排序（松手保存）
 /// - 长按卡片 → 弹底部菜单（移到顶部/上移/下移/移到底部/删除）
 ///
-/// 手势分工（避免冲突）：
-/// - InkWell（BookCard 内）：onTap → 打开阅读
-/// - Draggable（ReorderableBuilder 内）：onPan → 拖动排序
-/// - GestureDetector（本文件加）：onLongPress → 弹菜单
+/// 设计取舍：曾尝试 `flutter_reorderable_grid_view` 实现长按拖拽排序，
+/// 但该包在小米 15 + Material 3 下 children 非空时整个 body 渲染为整块灰色
+/// （与 surfaceTintColor、enableLongPress 设置均无关，包内部 Stack/Overlay 的
+/// 渲染兼容性问题）。为保证稳定，改用稳定 GridView.builder + 长按菜单排序：
+/// 多次点"上移/下移"按钮即可任意重排，与拖拽的最终结果完全等价。
 class ShelfPage extends StatefulWidget {
   const ShelfPage({super.key});
 
@@ -88,7 +86,24 @@ class _ShelfPageState extends State<ShelfPage> {
         .then((_) => _refresh());
   }
 
-  /// 长按弹底部菜单
+  void _moveTo(Book b, int newIndex) {
+    final oldIndex = _books.indexOf(b);
+    if (oldIndex < 0) return;
+    setState(() {
+      _books.removeAt(oldIndex);
+      final clamped = newIndex.clamp(0, _books.length);
+      _books.insert(clamped, b);
+    });
+    BookStore.persistOrder(_books);
+  }
+
+  void _moveRelative(Book b, int delta) {
+    final i = _books.indexOf(b);
+    if (i < 0) return;
+    _moveTo(b, i + delta);
+  }
+
+  /// 长按弹底部菜单（含：移到顶部/上移/下移/移到底部/删除）
   void _showReorderSheet(Book b) {
     final i = _books.indexOf(b);
     showModalBottomSheet(
@@ -150,8 +165,8 @@ class _ShelfPageState extends State<ShelfPage> {
             ),
             const Divider(height: 1),
             ListTile(
-              leading: const Icon(Icons.delete_outline,
-                  color: Color(0xFFE53935)),
+              leading:
+                  const Icon(Icons.delete_outline, color: Color(0xFFE53935)),
               title: const Text('删除',
                   style: TextStyle(color: Color(0xFFE53935))),
               onTap: () {
@@ -163,23 +178,6 @@ class _ShelfPageState extends State<ShelfPage> {
         ),
       ),
     );
-  }
-
-  void _moveTo(Book b, int newIndex) {
-    final oldIndex = _books.indexOf(b);
-    if (oldIndex < 0) return;
-    setState(() {
-      _books.removeAt(oldIndex);
-      final clamped = newIndex.clamp(0, _books.length);
-      _books.insert(clamped, b);
-    });
-    BookStore.persistOrder(_books);
-  }
-
-  void _moveRelative(Book b, int delta) {
-    final i = _books.indexOf(b);
-    if (i < 0) return;
-    _moveTo(b, i + delta);
   }
 
   @override
@@ -197,42 +195,28 @@ class _ShelfPageState extends State<ShelfPage> {
       ),
       body: _books.isEmpty
           ? _emptyHint()
-          : ReorderableBuilder(
-              scrollController: _scrollController,
-              // false = 短按+拖动立即触发排序；true = 长按才拖（与弹窗冲突）
-              enableLongPress: false,
-              children: _books
-                  .map(
-                    (b) => GestureDetector(
-                      // 只监听长按弹窗；短按交给 BookCard 内的 InkWell；拖动交给 Draggable
-                      onLongPress: () => _showReorderSheet(b),
-                      child: BookCard(
-                        key: ValueKey(b.key),
-                        book: b,
-                        onTap: () => _open(b),
-                        onDelete: () => _confirmDelete(b),
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onReorderPositions: (updates) {
-                for (final ReorderUpdateEntity u in updates) {
-                  if (u.oldIndex == u.newIndex) continue;
-                  final b = _books.removeAt(u.oldIndex);
-                  _books.insert(u.newIndex, b);
-                }
-                BookStore.persistOrder(_books);
-                setState(() {});
-              },
-              builder: (children) => GridView.count(
+          : GridView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(8),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                controller: _scrollController,
-                padding: const EdgeInsets.all(8),
                 mainAxisSpacing: 8,
                 crossAxisSpacing: 8,
                 childAspectRatio: 0.72,
-                children: children,
               ),
+              itemCount: _books.length,
+              itemBuilder: (ctx, i) {
+                final b = _books[i];
+                return GestureDetector(
+                  onLongPress: () => _showReorderSheet(b),
+                  child: BookCard(
+                    key: ValueKey(b.key),
+                    book: b,
+                    onTap: () => _open(b),
+                    onDelete: () => _confirmDelete(b),
+                  ),
+                );
+              },
             ),
     );
   }
