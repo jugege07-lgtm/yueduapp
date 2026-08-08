@@ -22,16 +22,21 @@ class ReaderControlBar extends StatelessWidget {
               tooltip: '返回书架',
             ),
             IconButton(
-              onPressed: () {
+              onPressed: () async {
+                // 兜底：首次进入 App 后台 init 还没完成时，用户点击会主动再试一次
+                if (!TtsService.instance.available) {
+                  await TtsService.instance.init();
+                }
                 if (!TtsService.instance.available) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('未配置离线语音模型，请先运行 tools/download_tts_model.sh'),
+                      content: Text(
+                          '未配置离线语音模型，请先运行 tools/download_tts_model.sh 后重新打包'),
                     ),
                   );
                   return;
                 }
-                p.toggleTts();
+                await p.toggleTts();
               },
               icon: Icon(p.ttsActive ? Icons.volume_up : Icons.headphones),
               tooltip: 'AI 听书',

@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'core/theme.dart';
 import 'data/book_store.dart';
 import 'services/audio_player.dart';
+import 'services/tts_service.dart';
 import 'app_config.dart';
 import 'pages/shelf_page.dart';
 
@@ -29,6 +30,10 @@ Future<void> main() async {
   // 两者任何 native 层问题都会导致进程级白屏。全部改为用到时懒加载。
   // 这里仅创建纯本地播放器（just_audio），零原生服务注册。
   audioHandler = TtsAudioHandler();
+
+  // 后台初始化离线 TTS（拷贝 45MB 模型到私有目录），不阻塞首帧；
+  // 听书按钮在用户点击时会再次 init() 作为兜底（双保险）。
+  unawaited(TtsService.instance.init());
 
   runApp(MyApp(fatalError: initError));
 }
