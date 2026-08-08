@@ -8,11 +8,13 @@ import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa_onnx;
 /// - tokens.txt
 /// - lexicon.txt（非 piper 模型需要）
 /// - espeak-ng-data（piper VITS 模型需要 espeak-ng 处理拼音）
-/// - dict/（可选）
+/// - dict/（jieba 分词词典，中文 VITS 需要）
+/// - *.fst / *.far（中文非 piper VITS 如 fanchen-C 需要的数字/拼音/日期规则文件）
 ///
-/// piper VITS（如 vits-piper-zh_CN-huayan-medium）通常**没有 lexicon.txt 也没有 dict/**，
-/// lexicon/dictDir 字段保留为空字符串，sherpa-onnx 原生层会忽略它们（取决于 native 实现）。
-/// 若报 "Empty token ids" 等问题，多半是模型文件不完整或 dataDir 路径错。
+/// piper VITS（如 vits-piper-zh_CN-huayan-medium）通常没有 lexicon.txt / dict/ / .fst，
+/// 这些字段留空串，sherpa-onnx 原生层会忽略。
+/// 非 piper 中文 VITS（如 vits-zh-hf-fanchen-C）必须有 ruleFsts（phone/number/date.fst）
+/// 才能正确朗读数字与多音字，否则会得到空音频或乱读。
 sherpa_onnx.OfflineTtsConfig getTtsConfig(String modelDir) {
   final dir = Directory(modelDir);
   final files = dir.existsSync()
@@ -67,6 +69,18 @@ sherpa_onnx.OfflineTtsConfig getTtsConfig(String modelDir) {
   final dataDir = _firstDir('espeak-ng-data');
   final dictDir = _firstDir('dict');
 
+  // 中文非 piper VITS（如 fanchen-C）需要 .fst 规则文件来正确朗读
+  // 数字/拼音/日期（phone.fst, number.fst, date.fst, new_heteronym.fst），
+  // 以及 .far 规则文件（rule.far）。piper 模型（huayan）没有这些，留空串即可。
+  final ruleFsts = files
+      .where((f) => f.path.toLowerCase().endsWith('.fst'))
+      .map((f) => f.path)
+      .join(',');
+  final ruleFars = files
+      .where((f) => f.path.toLowerCase().endsWith('.far'))
+      .map((f) => f.path)
+      .join(',');
+
   // 必填三项必须存在，否则视为模型不完整
   if (model == null || tokens == null) {
     throw StateError(
@@ -88,5 +102,7 @@ sherpa_onnx.OfflineTtsConfig getTtsConfig(String modelDir) {
       debug: false,
       provider: 'cpu',
     ),
+    ruleFsts: ruleFsts,
+    ruleFars: ruleFars,
   );
 }

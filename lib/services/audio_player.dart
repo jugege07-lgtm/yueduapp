@@ -34,6 +34,7 @@ class TtsAudioHandler extends BaseAudioHandler with SeekHandler {
   List<String> _paragraphs = [];
   int _index = 0;
   double _speed = 1.0;
+  int _sid = 0; // 当前说话人（音色），跟随 TtsService 的当前选择
   bool _active = false;
 
   TtsAudioHandler() {
@@ -48,6 +49,7 @@ class TtsAudioHandler extends BaseAudioHandler with SeekHandler {
     _paragraphs = paragraphs;
     _index = startIndex;
     _speed = speed;
+    _sid = TtsService.instance.currentSpeakerId;
   }
 
   /// 开始播放（从当前 _index 段起）
@@ -64,8 +66,8 @@ class TtsAudioHandler extends BaseAudioHandler with SeekHandler {
       return;
     }
     _index = index;
-    final wav =
-        await TtsService.instance.synthesize(_paragraphs[index], speed: _speed);
+    final wav = await TtsService.instance
+        .synthesize(_paragraphs[index], speed: _speed, sid: _sid);
     await _player.setAudioSource(BytesAudioSource(wav), preload: true);
     _updateMediaItem();
     await _player.play();
@@ -122,6 +124,12 @@ class TtsAudioHandler extends BaseAudioHandler with SeekHandler {
   /// 改变倍速：重新用新倍速合成当前段（离线引擎级变速，音质更自然）
   void setSpeedExternal(double speed) {
     _speed = speed;
+    if (_active) _playIndex(_index);
+  }
+
+  /// 切换音色（说话人 sid）：立即用新音色重新合成当前段
+  void setSpeakerExternal(int sid) {
+    _sid = sid;
     if (_active) _playIndex(_index);
   }
 

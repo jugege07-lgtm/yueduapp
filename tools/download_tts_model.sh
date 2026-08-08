@@ -8,7 +8,8 @@
 set -e
 
 # ⚠️ 默认示例：中文普通话 VITS 模型（如链接失效，请到上面的发布页另选一个并替换）
-MODEL_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-zh_CN-huayan-medium.tar.bz2"
+# 当前：梵尘 fanchen-C（多说话人，含萝莉/少女情感声线，最接近甜美少女音）
+MODEL_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-zh-hf-fanchen-C.tar.bz2"
 
 # 切到脚本所在目录（项目根）
 cd "$(dirname "$0")/.."

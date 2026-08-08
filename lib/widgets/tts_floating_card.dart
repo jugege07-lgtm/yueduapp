@@ -3,6 +3,7 @@ import '../providers/reader_provider.dart';
 
 /// AI 听书悬浮卡片：播放/暂停、上一段、下一段、倍速滑块（实时显示）、关闭。
 /// 倍速硬锁 1.0x ~ 5.0x（0.1x 步进），并从当前书读取/记忆倍速。
+/// 多说话人模型（如 fanchen-C）额外提供“音色”滑块，可实时切换说话人试听。
 class TtsFloatingCard extends StatelessWidget {
   final ReaderProvider p;
   const TtsFloatingCard(this.p, {super.key});
@@ -74,6 +75,38 @@ class TtsFloatingCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (p.speakerCount > 1)
+              Row(
+                children: [
+                  const Text(
+                    '音色',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF888888)),
+                  ),
+                  Expanded(
+                    child: Slider(
+                      min: 0,
+                      max: (p.speakerCount - 1).toDouble(),
+                      divisions: p.speakerCount - 1,
+                      value: p.currentSpeakerId
+                          .clamp(0, p.speakerCount - 1)
+                          .toDouble(),
+                      label: '音色 #${p.currentSpeakerId}',
+                      onChanged: (v) => p.setSpeaker(v.round()),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 56,
+                    child: Text(
+                      '#${p.currentSpeakerId}',
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF222222),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
           ],
         ),
       ),

@@ -4,6 +4,7 @@ import '../models/book.dart';
 import '../services/txt_loader.dart';
 import '../services/paginator.dart';
 import '../services/audio_player.dart';
+import '../services/tts_service.dart';
 import '../app_config.dart';
 
 /// 阅读页状态管理：当前书、分页结果、页码、字号、听书状态、控制栏显隐。
@@ -90,6 +91,16 @@ class ReaderProvider extends ChangeNotifier {
       pageStartParagraph.isNotEmpty && currentPage < pageStartParagraph.length
           ? pageStartParagraph[currentPage]
           : 0;
+
+  int get currentSpeakerId => TtsService.instance.currentSpeakerId;
+  int get speakerCount => TtsService.instance.speakerCount;
+
+  /// 切换听书音色（说话人 sid），并立即用新音色重新合成当前段试听
+  void setSpeaker(int sid) {
+    TtsService.instance.currentSpeakerId = sid;
+    handler.setSpeakerExternal(sid);
+    notifyListeners();
+  }
 
   /// 开启 / 关闭 AI 听书
   Future<void> toggleTts() async {
