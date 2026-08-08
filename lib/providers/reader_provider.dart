@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/book.dart';
 import '../services/txt_loader.dart';
 import '../services/paginator.dart';
 import '../services/audio_player.dart';
+import '../app_config.dart';
 
 /// 阅读页状态管理：当前书、分页结果、页码、字号、听书状态、控制栏显隐。
 class ReaderProvider extends ChangeNotifier {
@@ -96,6 +98,8 @@ class ReaderProvider extends ChangeNotifier {
       await handler.pause();
       ttsActive = false;
     } else {
+      // 后台尝试把本地播放器升级为带锁屏控制的 audio_service 版（失败无影响）
+      unawaited(upgradeAudioHandler());
       handler.loadPlaylist(paragraphs, currentParagraph, book!.ttsSpeed);
       await handler.start();
       ttsActive = true;
