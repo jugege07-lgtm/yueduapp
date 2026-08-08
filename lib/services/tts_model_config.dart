@@ -88,8 +88,5 @@ sherpa_onnx.OfflineTtsConfig getTtsConfig(String modelDir) {
       debug: false,
       provider: 'cpu',
     ),
-    maxNumSentences: 1,
-    ruleFsts: '',
-    ruleFars: '',
   );
 }
