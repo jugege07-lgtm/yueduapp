@@ -31,8 +31,22 @@ jobs:
         # 仓库里没有提交 android/ 目录，先在云端生成（不碰 lib/ 和 pubspec）
         run: flutter create --platforms=android .
 
-      - name: Download offline TTS model (打包进 APK，失败也不阻断构建)
-        run: bash tools/download_tts_model.sh || echo "::warning::模型下载失败，听书功能将不可用（APK 仍可正常打包）"
+      - name: Download offline TTS model (必须成功，否则听书功能不可用)
+        run: bash tools/download_tts_model.sh
+
+      - name: Verify TTS model files
+        run: |
+          if [ ! -f assets/tts-model/manifest.txt ]; then
+            echo "::error::assets/tts-model/manifest.txt 不存在，模型未正确下载"
+            exit 1
+          fi
+          ONNX_COUNT=$(find assets/tts-model -name "*.onnx" -type f | wc -l)
+          if [ "$ONNX_COUNT" -eq 0 ]; then
+            echo "::error::未找到 .onnx 模型文件"
+            exit 1
+          fi
+          echo "模型文件已就绪（共 $(wc -l < assets/tts-model/manifest.txt) 个）："
+          cat assets/tts-model/manifest.txt
 
       - name: Install dependencies
         run: flutter pub get

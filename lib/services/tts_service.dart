@@ -43,19 +43,22 @@ class TtsService {
     }
   }
 
-  /// 拷贝资源模型到应用支持目录，并返回该目录路径
+  /// 拷贝资源模型到应用支持目录，并返回该目录路径。
+  /// 模型 tar 通常解压到一个子目录里，所以写文件前会先创建父目录。
   Future<String> _prepareModelDir() async {
     final appDir = await getApplicationSupportDirectory();
     final target = Directory('${appDir.path}/tts-model');
     if (!await target.exists()) await target.create(recursive: true);
 
     // manifest.txt 由下载脚本生成，列出所有需要拷贝的模型文件。
-    // 若尚未下载（manifest 不存在），直接返回目录即可（available 会为 false）。
+    // 若 manifest 不存在，说明 APK 打包时没下载模型，直接返回空目录。
     String manifestContent;
     try {
       manifestContent =
           await rootBundle.loadString('assets/tts-model/manifest.txt');
     } catch (_) {
+      debugPrint('[TtsService] assets/tts-model/manifest.txt 不存在，'
+          '说明 APK 未包含离线语音模型。');
       return target.path;
     }
     final files =
@@ -63,9 +66,15 @@ class TtsService {
 
     for (final f in files) {
       final out = File('${target.path}/$f');
-      if (!await out.exists()) {
+      if (await out.exists()) continue;
+      try {
         final data = await rootBundle.load('assets/tts-model/$f');
+        final parent = out.parent;
+        if (!await parent.exists()) await parent.create(recursive: true);
         await out.writeAsBytes(data.buffer.asUint8List());
+      } catch (e) {
+        debugPrint('[TtsService] 拷贝模型文件失败 $f: $e');
+        rethrow;
       }
     }
     return target.path;

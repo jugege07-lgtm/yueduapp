@@ -31,7 +31,7 @@ class ReaderControlBar extends StatelessWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
-                          '未配置离线语音模型，请先运行 tools/download_tts_model.sh 后重新打包'),
+                          '当前安装包未包含离线语音模型，请重新下载最新 APK 或检查网络后重试'),
                     ),
                   );
                   return;

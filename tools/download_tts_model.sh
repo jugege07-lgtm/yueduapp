@@ -19,7 +19,9 @@ mkdir -p "$DEST"
 cd "$DEST"
 
 echo "==> 下载模型: $MODEL_URL"
-curl -L -o model.tar.bz2 "$MODEL_URL"
+# 带重试：网络抖动时自动重试，避免 CI 因偶发断线而失败
+curl -L --retry 5 --retry-delay 10 --connect-timeout 30 --max-time 1800 \
+     -o model.tar.bz2 "$MODEL_URL"
 
 echo "==> 解压..."
 tar xf model.tar.bz2
