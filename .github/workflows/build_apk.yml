@@ -51,6 +51,9 @@ jobs:
           echo "磁盘占用："
           du -sh assets/tts-model
 
+      - name: Patch pubspec.yaml assets (Flutter 目录 assets 默认不包含子目录)
+        run: python3 tools/patch_pubspec_assets.py
+
       - name: Install dependencies
         run: flutter pub get
 
@@ -72,7 +75,7 @@ jobs:
             exit 1
           fi
           echo "APK 内 assets/tts-model 内容："
-          unzip -l "$APK" | grep -E "assets/tts-model/" | head -30
+          unzip -l "$APK" | grep -E "assets/tts-model/" | head -40
           if unzip -l "$APK" | grep -q "assets/tts-model/.*\.onnx"; then
             echo "✅ APK 已包含 .onnx 模型文件"
           else
