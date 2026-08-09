@@ -23,14 +23,36 @@ class TtsService {
   int currentSpeakerId = 0; // 当前选中的说话人（音色），0 为默认
   int speakerCount = 187; // 模型说话人总数（fanchen-C 为 187；加载后若可获取则自动更新）
 
+  /// 防止多个入口同时初始化导致竞态（main.dart 后台 init + 用户点击听书）。
+  Future<void>? _initFuture;
+
   Future<void> init() async {
     if (_tts != null) return;
+    if (_initFuture != null) {
+      await _initFuture!;
+      return;
+    }
+    _initFuture = _doInit();
+    try {
+      await _initFuture!;
+    } finally {
+      _initFuture = null;
+    }
+  }
+
+  Future<void> _doInit() async {
     lastError = '';
     try {
       _modelDir = await _prepareModelDir();
       final config = getTtsConfig(_modelDir!);
+
+      // ⚠️ sherpa_onnx 1.13.x 要求：创建 OfflineTts 之前必须先调用 initBindings()，
+      // 否则 native 层会抛异常："Please initialize sherpa-onnx first"。
+      sherpa_onnx.initBindings();
+
       _tts = sherpa_onnx.OfflineTts(config);
       available = true;
+
       // 尝试读取说话人数量（多说话人模型如 fanchen-C 有 187 个音色可选）
       try {
         final n = (_tts as dynamic).numSpeakers;
