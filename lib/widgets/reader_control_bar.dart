@@ -28,10 +28,12 @@ class ReaderControlBar extends StatelessWidget {
                   await TtsService.instance.init();
                 }
                 if (!TtsService.instance.available) {
+                  final err = TtsService.instance.lastError.isEmpty
+                      ? '未知错误'
+                      : TtsService.instance.lastError;
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                          '当前安装包未包含离线语音模型，请重新下载最新 APK 或检查网络后重试'),
+                    SnackBar(
+                      content: Text('听书初始化失败：$err'),
                     ),
                   );
                   return;

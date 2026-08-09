@@ -18,12 +18,14 @@ class TtsService {
   sherpa_onnx.OfflineTts? _tts;
   String? _modelDir;
   bool available = false; // 模型是否就绪（未下载时为 false）
+  String lastError = ''; // 最后一次初始化失败的错误信息（调试用）
 
   int currentSpeakerId = 0; // 当前选中的说话人（音色），0 为默认
   int speakerCount = 187; // 模型说话人总数（fanchen-C 为 187；加载后若可获取则自动更新）
 
   Future<void> init() async {
     if (_tts != null) return;
+    lastError = '';
     try {
       _modelDir = await _prepareModelDir();
       final config = getTtsConfig(_modelDir!);
@@ -36,30 +38,31 @@ class TtsService {
       } catch (_) {
         // 单说话人或绑定未暴露该 API：保持默认
       }
-    } catch (e) {
+    } catch (e, st) {
       // 模型未下载或路径不匹配：听书功能不可用，但 App 其余功能正常
       available = false;
+      lastError = '$e';
       debugPrint('[TtsService] 离线语音模型未就绪：$e');
+      debugPrint('[TtsService] $st');
     }
   }
 
   /// 拷贝资源模型到应用支持目录，并返回该目录路径。
-  /// 模型 tar 通常解压到一个子目录里，所以写文件前会先创建父目录。
+  /// CI 已将模型文件平铺在 assets/tts-model/ 根目录，所以这里直接按清单复制即可。
   Future<String> _prepareModelDir() async {
     final appDir = await getApplicationSupportDirectory();
     final target = Directory('${appDir.path}/tts-model');
     if (!await target.exists()) await target.create(recursive: true);
 
     // manifest.txt 由下载脚本生成，列出所有需要拷贝的模型文件。
-    // 若 manifest 不存在，说明 APK 打包时没下载模型，直接返回空目录。
+    // 若 manifest 不存在，说明 APK 打包时没下载模型。
     String manifestContent;
     try {
       manifestContent =
           await rootBundle.loadString('assets/tts-model/manifest.txt');
-    } catch (_) {
-      debugPrint('[TtsService] assets/tts-model/manifest.txt 不存在，'
-          '说明 APK 未包含离线语音模型。');
-      return target.path;
+    } catch (e) {
+      throw StateError('APK 中缺少 assets/tts-model/manifest.txt，'
+          '说明离线语音模型未被打包。错误：$e');
     }
     final files =
         manifestContent.split('\n').where((l) => l.trim().isNotEmpty);
@@ -73,8 +76,7 @@ class TtsService {
         if (!await parent.exists()) await parent.create(recursive: true);
         await out.writeAsBytes(data.buffer.asUint8List());
       } catch (e) {
-        debugPrint('[TtsService] 拷贝模型文件失败 $f: $e');
-        rethrow;
+        throw StateError('拷贝模型文件 $f 失败：$e');
       }
     }
     return target.path;

@@ -47,6 +47,9 @@ jobs:
           fi
           echo "模型文件已就绪（共 $(wc -l < assets/tts-model/manifest.txt) 个）："
           cat assets/tts-model/manifest.txt
+          echo ""
+          echo "磁盘占用："
+          du -sh assets/tts-model
 
       - name: Install dependencies
         run: flutter pub get
@@ -56,7 +59,32 @@ jobs:
         run: python3 tools/patch_android.py
 
       - name: Build APK (按 CPU 架构拆分，体积更小)
-        run: flutter build apk --split-per-abi --no-tree-shake-icons
+        run: |
+          flutter clean
+          flutter build apk --split-per-abi --no-tree-shake-icons
+
+      - name: Verify APK contains TTS model assets
+        run: |
+          APK="build/app/outputs/flutter-apk/app-arm64-v8a-release.apk"
+          echo "检查 APK: $APK"
+          if [ ! -f "$APK" ]; then
+            echo "::error::未找到 arm64 APK"
+            exit 1
+          fi
+          echo "APK 内 assets/tts-model 内容："
+          unzip -l "$APK" | grep -E "assets/tts-model/" | head -30
+          if unzip -l "$APK" | grep -q "assets/tts-model/.*\.onnx"; then
+            echo "✅ APK 已包含 .onnx 模型文件"
+          else
+            echo "::error::APK 未包含 .onnx 模型文件，听书功能将不可用"
+            exit 1
+          fi
+          if unzip -l "$APK" | grep -q "assets/tts-model/manifest.txt"; then
+            echo "✅ APK 已包含 manifest.txt"
+          else
+            echo "::error::APK 未包含 manifest.txt"
+            exit 1
+          fi
 
       - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
